@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+
 from strategy import analyze_history
 from generator import generate_numbers
 from analyzer import strongest_digits
@@ -10,7 +12,7 @@ st.subheader("Penjelasan Sistem")
 
 st.write("""
 Aplikasi ini menghasilkan kombinasi angka berdasarkan analisa data result sebelumnya.
-Generator menggunakan strategi yang sering dipakai dalam analisa angka.
+Generator menggunakan strategi yang sering digunakan dalam analisa angka.
 """)
 
 st.subheader("Strategi yang Digunakan")
@@ -38,7 +40,7 @@ total = st.number_input(
 "Jumlah angka yang ingin di generate",
 min_value=5,
 max_value=500,
-value=20
+value=50
 )
 
 if st.button("Generate Angka"):
@@ -54,10 +56,12 @@ if st.button("Generate Angka"):
 
     st.subheader("Hasil Generate")
 
-    cols = st.columns(5)
+    row_size = 10
+    rows = [numbers[i:i+row_size] for i in range(0, len(numbers), row_size)]
 
-    for i, n in enumerate(numbers):
-        cols[i % 5].write(n)
+    df = pd.DataFrame(rows)
+
+    st.dataframe(df, use_container_width=True)
 
     top_digits = strongest_digits(numbers)
 
@@ -70,7 +74,9 @@ if st.button("Generate Angka"):
 
     top_numbers = top_predictions(numbers)
 
-    cols2 = st.columns(5)
+    row_size2 = 5
+    rows2 = [top_numbers[i:i+row_size2] for i in range(0, len(top_numbers), row_size2)]
 
-    for i, n in enumerate(top_numbers):
-        cols2[i % 5].write(n)
+    df2 = pd.DataFrame(rows2)
+
+    st.dataframe(df2, use_container_width=True)
