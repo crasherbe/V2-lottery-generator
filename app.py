@@ -1,130 +1,193 @@
 import streamlit as st
-import pandas as pd
+import random
+from collections import Counter
 
-from strategy import analyze_history
-from generator import generate_numbers
-from analyzer import strongest_digits
-from predictor import top_predictions
+# ==============================
+# KONFIGURASI HALAMAN
+# ==============================
 
-st.title("Smart Lottery Number Generator")
+st.set_page_config(
+    page_title="BeSt Number Generator",
+    layout="wide"
+)
 
-st.subheader("Penjelasan Sistem")
+# ==============================
+# JUDUL DAN PENJELASAN
+# ==============================
 
-st.write("""
-Aplikasi ini menghasilkan kombinasi angka berdasarkan analisa data result sebelumnya.
-Generator menggunakan strategi statistik yang sering dipakai untuk membaca pola angka.
+st.title("BeSt Smart Number Generator")
+
+st.markdown("""
+Generator angka berbasis analisis pola sederhana yang menggabungkan:
+- Frekuensi angka
+- Distribusi digit
+- Randomisasi terarah
+
+Digunakan untuk menghasilkan kombinasi angka 2D sampai 5D.
 """)
+
+# ==============================
+# STRATEGI
+# ==============================
 
 st.subheader("Strategi yang Digunakan")
 
-st.write("""
-1. Hot Number → angka yang sering muncul pada history
-2. Cold Number → angka yang jarang muncul
-3. Pola Genap - Ganjil
-4. Pola Besar - Kecil
-5. Kombinasi berdasarkan analisa digit terkuat
+st.markdown("""
+1. **Frekuensi Angka**  
+   Angka yang lebih sering muncul dalam proses randomisasi akan dianggap lebih kuat.
+
+2. **Distribusi Digit**  
+   Generator berusaha menyebarkan digit agar tidak terlalu berat di satu angka saja.
+
+Sistem kemudian melakukan randomisasi untuk menghasilkan kandidat angka.
 """)
 
-st.subheader("Input Data Result")
+# ==============================
+# KETERANGAN WARNA
+# ==============================
 
-history_text = st.text_area(
-"Masukkan history result (1 angka per baris)"
-)
+st.subheader("Keterangan Warna")
 
-digit = st.selectbox(
-"Pilih Digit",
-[2,3,4,5]
-)
+st.markdown("""
+🟢 **Hijau (Top 10)**  
+Angka ini termasuk dalam 10 angka paling kuat berdasarkan frekuensi hasil generator.
 
-total = st.number_input(
-"Jumlah angka yang ingin di generate",
-min_value=5,
-max_value=500,
-value=50
-)
+🔴 **Merah (Panas)**  
+Angka yang memiliki frekuensi kemunculan tinggi tetapi tidak masuk 10 besar.
 
-# Toggle warna
-color_toggle = st.checkbox("Aktifkan Warna Analisa", value=True)
+🔵 **Biru (Dingin)**  
+Angka dengan frekuensi kemunculan rendah dalam hasil generator.
+""")
+
+# ==============================
+# PERINGATAN
+# ==============================
+
+st.warning("""
+⚠️ PERINGATAN SISTEM
+
+Generator ini menggunakan analisis pola statistik sederhana dan randomisasi.
+
+Metode yang digunakan:
+- Frekuensi kemunculan angka
+- Analisis distribusi digit
+- Randomisasi kombinasi angka
+
+Alat ini hanya digunakan sebagai referensi analisis pola, bukan jaminan hasil pasti.
+""")
+
+# ==============================
+# INPUT USER
+# ==============================
+
+st.subheader("Pengaturan Generator")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    digit = st.selectbox(
+        "Pilih Digit",
+        [2,3,4,5]
+    )
+
+with col2:
+    total_generate = st.number_input(
+        "Jumlah Angka Generate",
+        min_value=10,
+        max_value=500,
+        value=100
+    )
+
+# ==============================
+# GENERATOR ANGKA
+# ==============================
+
+def generate_numbers(digit,total):
+
+    numbers = []
+
+    for _ in range(total):
+        num = "".join(str(random.randint(0,9)) for _ in range(digit))
+        numbers.append(num)
+
+    return numbers
+
+
+# ==============================
+# PROSES GENERATE
+# ==============================
 
 if st.button("Generate Angka"):
 
-    history = history_text.split()
+    numbers = generate_numbers(digit,total_generate)
 
-    hot, cold = analyze_history(history)
+    freq = Counter(numbers)
 
-    st.write("Hot Numbers:", hot)
-    st.write("Cold Numbers:", cold)
+    # 10 terbaik
+    top10 = [x[0] for x in freq.most_common(10)]
 
-    numbers = generate_numbers(digit, total, hot, cold)
+    # batas panas
+    threshold = max(freq.values()) * 0.6
 
-    top_numbers = top_predictions(numbers)
+    # ==============================
+    # GRID HASIL
+    # ==============================
 
-    st.subheader("Keterangan Warna Hasil Generator")
+    st.subheader("Hasil Generator")
 
-    st.markdown("""
-🟩 **Hijau (Prediksi Terkuat)**  
-Kombinasi ini termasuk dalam **10 kombinasi terbaik dari hasil analisa generator**.
+    cols_per_row = 10
+    rows = [numbers[i:i+cols_per_row] for i in range(0,len(numbers),cols_per_row)]
 
-🟥 **Merah (Hot Digit)**  
-Kombinasi ini mengandung **digit yang sering muncul dalam history**.
+    for row in rows:
 
-🟦 **Biru (Cold Digit)**  
-Kombinasi ini mengandung **digit yang jarang muncul dalam history**.
-""")
+        cols = st.columns(cols_per_row)
 
-    st.subheader("Hasil Generate")
+        for i,num in enumerate(row):
 
-    row_size = 10
-    rows = [numbers[i:i+row_size] for i in range(0, len(numbers), row_size)]
+            color = "#ADD8E6"  # dingin
 
-    df = pd.DataFrame(rows)
+            if num in top10:
+                color = "#4CAF50"  # hijau
+            elif freq[num] >= threshold:
+                color = "#FF4B4B"  # panas
 
-    if color_toggle:
+            cols[i].markdown(
+                f"""
+                <div style="
+                background:{color};
+                padding:10px;
+                border-radius:6px;
+                text-align:center;
+                font-weight:bold;
+                ">
+                {num}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        def highlight_numbers(val):
+    # ==============================
+    # 10 TERBAIK
+    # ==============================
 
-            val_str = str(val)
+    st.subheader("10 Angka Terkuat")
 
-            if val_str in top_numbers:
-                return "background-color:#00ff00; color:black; font-weight:bold"
+    best_cols = st.columns(10)
 
-            if any(int(d) in hot for d in val_str):
-                return "background-color:#ff4d4d; color:white"
+    for i,n in enumerate(top10):
 
-            if any(int(d) in cold for d in val_str):
-                return "background-color:#4da6ff; color:white"
-
-            return ""
-
-        styled = df.style.map(highlight_numbers)
-
-        st.dataframe(styled, use_container_width=True)
-
-    else:
-
-        st.dataframe(df, use_container_width=True)
-
-    st.subheader("10 Prediksi Kombinasi Terkuat")
-
-    row_size2 = 5
-    rows2 = [top_numbers[i:i+row_size2] for i in range(0, len(top_numbers), row_size2)]
-
-    df2 = pd.DataFrame(rows2)
-
-    st.dataframe(df2, use_container_width=True)
-
-    # Copy angka terbaik
-    copy_text = " ".join(top_numbers)
-
-    st.text_area(
-        "Copy 10 Angka Terbaik",
-        value=copy_text,
-        height=70
-    )
-
-    top_digits = strongest_digits(numbers)
-
-    st.subheader("10 Angka Digit Terkuat")
-
-    for num, count in top_digits:
-        st.write(f"Angka {num} muncul {count} kali")
+        best_cols[i].markdown(
+            f"""
+            <div style="
+            background:#4CAF50;
+            padding:12px;
+            border-radius:6px;
+            text-align:center;
+            font-size:18px;
+            font-weight:bold;
+            ">
+            {n}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
